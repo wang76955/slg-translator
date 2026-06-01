@@ -56,6 +56,15 @@ dir *.json /s
 | 翻译引擎 | Node.js (openai SDK) |
 
 ## 🚀 快速开始
+### 直接下载（推荐）
+
+> 不需要安装任何开发环境，下载即用
+
+前往 [Releases 页面](https://github.com/wang76955/slg-translator/releases) 下载最新版本的 SLG-Translator-v2.0-win32-x64.zip，
+解压后运行 SLG-Translator.exe 即可。
+
+### 从源码构建
+
 
 ### 前置要求
 
