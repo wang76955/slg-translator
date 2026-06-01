@@ -1,4 +1,4 @@
-﻿import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog } from 'electron'
 import { scanDirectory, exportTranslatedFiles } from '../core/scanner'
 import { translateBatch } from '../core/translator'
 import type { ScanResult, GlossaryEntry } from '../core/types'
