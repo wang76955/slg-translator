@@ -1,92 +1,82 @@
 ﻿# 🎮 SLG 文本翻译工具
 
-SLG（策略类游戏）文本本地化桌面工具。支持多语言翻译、术语管理、批量处理，保持 JSON 结构完整性。
+> 一键翻译 SLG 游戏文本文件，支持 OpenAI / DeepSeek 等多种 AI 翻译服务
 
 ## ✨ 功能
 
-- **项目化管理** — 创建翻译项目，关联游戏文本目录，自动扫描所有 JSON 文件
-- **智能 JSON 解析** — 递归提取字符串，自动过滤数字/URL/占位符，展示 Key → 原文对照
-- **AI 翻译** — 基于 OpenAI API（GPT-4o-mini / GPT-4o），支持中 ↔ 英/日/韩/法/德等多语种
-- **术语管理** — 维护角色名/技能名/物品名等术语表，翻译时自动匹配确保一致性
-- **翻译编辑器** — 左右对照视图，逐条编辑，搜索筛选，翻译进度条
-- **批量操作** — 一键批量 AI 翻译，增量翻译（只翻新增/变更内容）
-- **导出** — 保持原始 JSON 结构，支持 JSON / Excel 导出
+- **📂 选择目录** — 选取游戏文本所在的 JSON 目录
+- **🔍 自动扫描** — 递归扫描所有 JSON 文件，自动提取可翻译文本（过滤数字/URL/占位符）
+- **🌐 多语言** — 支持中/英/日/韩/法/德互译
+- **🤖 多 AI 提供商** — 支持 OpenAI (GPT-4o-mini/4o) 和 DeepSeek (deepseek-chat)
+- **⚡ 一键翻译** — 批量调用 AI 翻译，保持 JSON 结构完整导出
+- **📁 保持结构** — 输出目录保持与源目录完全相同的文件结构
 
 ## 🖥️ 技术栈
 
 | 层级 | 技术 |
 |------|------|
 | 桌面壳 | Electron |
-| 前端 | React + TypeScript + Tailwind CSS |
-| 状态管理 | Zustand |
-| 翻译引擎 | Python（OpenAI API） |
-| 存储 | SQLite（better-sqlite3） |
+| 前端 | React + Tailwind CSS |
+| 翻译引擎 | Node.js (openai SDK) |
 
 ## 🚀 快速开始
 
 ### 前置要求
 
 - Node.js >= 18
-- Python >= 3.8
-- OpenAI API Key
+- OpenAI API Key 或 DeepSeek API Key
 
 ### 安装与运行
 
-`ash
+```bash
 # 克隆仓库
 git clone https://github.com/wang76955/slg-translator.git
 cd slg-translator
 
-# 安装 Node 依赖
+# 安装依赖
 npm install
-
-# 安装 Python 依赖
-pip install openai
 
 # 开发模式启动
 npm run dev
-`
+```
 
 ### 构建安装包
 
-`ash
+```bash
 npm run electron:build
-`
-
-Windows 生成 elease/SLG-Translator-x.x.x-x64.exe
-macOS 生成 elease/SLG-Translator-x.x.x-x64.dmg
+```
 
 ## 📖 使用流程
 
-1. **新建项目** — 填写项目名称，选择游戏 JSON 文件目录
-2. **设置 API Key** — 在「设置」选项卡填入 OpenAI API Key
-3. **选择文件** — 左侧文件树点击 JSON 文件，加载可翻译文本
-4. **管理术语** — 在「术语表」中添加角色名/技能名等固定译法
-5. **AI 翻译** — 点击「AI 批量翻译」，等待处理完成
-6. **校对编辑** — 点击译文区域可逐条手动修改
-7. **导出** — 保持原始结构导出翻译后的 JSON
+1. **选择目录** — 点击「选择目录」选取 SLG 游戏的 JSON 文本文件夹
+2. **扫描文件** — 自动扫描所有 JSON 文件，预览待翻译内容
+3. **配置翻译** — 选择源语言/目标语言、AI 提供商（OpenAI/DeepSeek/自定义）、输入 API Key
+4. **一键翻译** — 点击「开始翻译」，等待自动完成
+5. **导出结果** — 翻译后的文件会输出到 `{原目录名}_{目标语言}` 目录中
 
 ## 📁 项目结构
 
-`
+```
 slg-translator/
-├── electron/              # Electron 主进程
-│   ├── main.ts            # 窗口管理
-│   ├── preload.ts         # IPC 桥接
-│   ├── database.ts        # SQLite 数据库
-│   └── ipc-handlers.ts    # IPC 处理器（20+ API）
-├── src/                   # React 前端
-│   ├── pages/             # 页面组件
-│   ├── components/        # UI 组件
-│   ├── stores/            # Zustand 状态
-│   └── types/             # TypeScript 类型
-├── python/                # 翻译引擎
-│   ├── translator.py      # OpenAI API 调用
-│   ├── json_parser.py     # JSON 解析
-│   └── glossary.py        # 术语表处理
-├── test-data/             # 示例测试数据
+├── core/                    # 平台无关核心引擎（可复用于未来 Android 版）
+│   ├── types.ts             #   共享类型定义
+│   ├── scanner.ts           #   JSON 扫描与文本提取
+│   ├── translator.ts        #   AI 翻译引擎（OpenAI/DeepSeek）
+│   └── providers.ts         #   AI 提供商配置
+├── electron/                # Electron 桌面端
+│   ├── main.ts              #   窗口管理
+│   ├── preload.ts           #   IPC 桥接
+│   └── ipc-handlers.ts      #   IPC 处理器
+├── src/                     # React 前端
+│   ├── App.tsx              #   单页面应用
+│   └── main.tsx             #   入口
+├── test-data/               # 示例测试数据
 └── package.json
-`
+```
+
+## 🔮 未来计划
+
+- Android 版本（core/ 已设计为平台无关，可直接复用）
 
 ## 📜 许可证
 

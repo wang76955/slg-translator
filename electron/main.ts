@@ -1,16 +1,15 @@
 ﻿import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import { initDatabase, getDatabase } from './database'
 import { registerIpcHandlers } from './ipc-handlers'
 
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    minWidth: 960,
-    minHeight: 640,
+    width: 800,
+    height: 700,
+    minWidth: 640,
+    minHeight: 560,
     title: 'SLG 文本翻译工具',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -28,7 +27,6 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  initDatabase()
   registerIpcHandlers()
   createWindow()
 
