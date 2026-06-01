@@ -4,7 +4,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   selectDirectory: () => ipcRenderer.invoke("dialog:selectDirectory"),
   scanDirectory: (dirPath) => ipcRenderer.invoke("translate:scan", dirPath),
   runTranslation: (data) => ipcRenderer.invoke("translate:run", data),
-  selectShortcut: () => ipcRenderer.invoke("dialog:selectShortcut"),
-  resolveShortcut: (lnkPath) => ipcRenderer.invoke("shortcut:resolve", lnkPath),
-  findGameTexts: (gameDir) => ipcRenderer.invoke("shortcut:findTexts", gameDir),
+
+  // 选择游戏 exe 程序 → 自动检测文本
+  selectExe: () => ipcRenderer.invoke("game:selectExe"),
+  resolveGameDir: (exePath) => ipcRenderer.invoke("game:resolveDir", exePath),
+  findGameTexts: (gameDir) => ipcRenderer.invoke("game:findTexts", gameDir),
 })

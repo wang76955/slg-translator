@@ -1,62 +1,56 @@
 ﻿import { ipcMain, dialog } from 'electron'
+import * as path from 'path'
+import * as fs from 'fs'
 import { scanDirectory, exportTranslatedFiles } from '../core/scanner'
 import { translateBatch } from '../core/translator'
-import { resolveGameDir, findGameTextFiles } from './shortcut'
-import type { ScanResult, GlossaryEntry } from '../core/types'
+import { findGameTextFiles } from './shortcut'
+import type { GlossaryEntry } from '../core/types'
 
-/**
- * 注册所有 IPC 处理器
- */
 export function registerIpcHandlers(): void {
-  console.log("[SLG] registerIpcHandlers called")
-
-  // ===== 目录选择 =====
+  // ===== 选择游戏目录 =====
   ipcMain.handle('dialog:selectDirectory', async () => {
-    console.log("[SLG] dialog:selectDirectory handler invoked")
     try {
       const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
-      console.log("[SLG] dialog result:", result)
       return result.canceled ? null : result.filePaths[0]
-    } catch (err) {
-      console.error("[SLG] dialog error:", err)
+    } catch {
       return null
     }
   })
 
-  // ===== 快捷方式选择 =====
-  ipcMain.handle('dialog:selectShortcut', async () => {
-    console.log("[SLG] dialog:selectShortcut handler invoked")
+  // ===== 选择游戏 .exe 主程序 =====
+  ipcMain.handle('game:selectExe', async () => {
     try {
       const result = await dialog.showOpenDialog({
         properties: ['openFile'],
         filters: [
-          { name: '快捷方式', extensions: ['lnk'] },
+          { name: '应用程序', extensions: ['exe'] },
           { name: '所有文件', extensions: ['*'] },
         ],
       })
-      console.log("[SLG] shortcut dialog result:", result)
       return result.canceled ? null : result.filePaths[0]
-    } catch (err) {
-      console.error("[SLG] shortcut dialog error:", err)
+    } catch {
       return null
     }
   })
 
-  // ===== 解析快捷方式 =====
-  ipcMain.handle('shortcut:resolve', async (_, lnkPath: string): Promise<{
+  // ===== 从 exe 路径获取游戏安装目录 =====
+  ipcMain.handle('game:resolveDir', async (_, exePath: string): Promise<{
     gameDir: string | null
     error?: string
   }> => {
     try {
-      const gameDir = resolveGameDir(lnkPath)
-      return { gameDir }
+      if (!fs.existsSync(exePath)) return { gameDir: null, error: '文件不存在' }
+      const dir = fs.statSync(exePath).isFile()
+        ? path.dirname(exePath)
+        : exePath
+      return { gameDir: dir }
     } catch (err: any) {
       return { gameDir: null, error: err.message }
     }
   })
 
-  // ===== 自动检索文本 =====
-  ipcMain.handle('shortcut:findTexts', async (_, gameDir: string): Promise<{
+  // ===== 在游戏目录中自动检索 JSON 文本文件 =====
+  ipcMain.handle('game:findTexts', async (_, gameDir: string): Promise<{
     textDirs: { textDir: string; fileCount: number }[]
     totalFiles: number
     error?: string
@@ -72,7 +66,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // ===== 扫描目录 =====
+  // ===== 扫描目录下的 JSON 文件 =====
   ipcMain.handle('translate:scan', async (_, dirPath: string): Promise<{
     files: { filePath: string; relativePath: string; textCount: number }[]
     totalTexts: number

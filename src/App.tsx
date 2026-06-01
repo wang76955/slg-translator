@@ -14,8 +14,8 @@ interface AiProvider {
   models: AiModel[]
 }
 
-interface ShortcutInfo {
-  lnkPath: string
+interface GameInfo {
+  exePath: string
   gameDir: string
   foundDirs: { textDir: string; fileCount: number }[]
   totalFiles: number
@@ -82,8 +82,8 @@ declare global {
         glossary?: { source: string; target: string }[]
       }) => Promise<{ success: boolean; count: number; outputDir: string; error?: string }>
       // 快捷方式导入
-      selectShortcut: () => Promise<string | null>
-      resolveShortcut: (lnkPath: string) => Promise<{ gameDir: string | null; error?: string }>
+      selectExe: () => Promise<string | null>
+      resolveGameDir: (exePath: string) => Promise<{ gameDir: string | null; error?: string }>
       findGameTexts: (gameDir: string) => Promise<{
         textDirs: { textDir: string; fileCount: number }[]
         totalFiles: number
@@ -104,7 +104,7 @@ const App: React.FC = () => {
   const [customBaseURL, setCustomBaseURL] = useState('')
 
   // 快捷方式状态
-  const [shortcutInfo, setShortcutInfo] = useState<ShortcutInfo | null>(null)
+  const [gameInfo, setGameInfo] = useState<GameInfo | null>(null)
   const [resolving, setResolving] = useState(false)
   const [detecting, setDetecting] = useState(false)
 
@@ -129,7 +129,7 @@ const App: React.FC = () => {
       const dir = await window.electronAPI.selectDirectory()
       if (dir) {
         setDirPath(dir)
-        setShortcutInfo(null)
+        setGameInfo(null)
         setScanResult(null)
         setResult(null)
       }
@@ -138,21 +138,21 @@ const App: React.FC = () => {
     }
   }
 
-  // === 操作：导入快捷方式 ===
-  const handleSelectShortcut = async () => {
-    const lnkPath = await window.electronAPI.selectShortcut()
-    if (!lnkPath) return
+  // === 操作：选择游戏程序 ===
+  const handleSelectExe = async () => {
+    const exePath = await window.electronAPI.selectExe()
+    if (!exePath) return
 
     setResolving(true)
-    setShortcutInfo(null)
+    setGameInfo(null)
     setScanResult(null)
     setResult(null)
 
     try {
       // 解析快捷方式
-      const { gameDir, error } = await window.electronAPI.resolveShortcut(lnkPath)
+      const { gameDir, error } = await window.electronAPI.resolveGameDir(exePath)
       if (!gameDir) {
-        showMsg('解析快捷方式失败：' + (error || '无法获取目标路径'))
+        showMsg('解析失败：' + (error || '无法获取目标路径'))
         setResolving(false)
         return
       }
@@ -162,13 +162,13 @@ const App: React.FC = () => {
       const found = await window.electronAPI.findGameTexts(gameDir)
 
       if (found.totalFiles === 0) {
-        showMsg('未在游戏目录中找到 JSON 文本文件，可尝试手动选择目录')
+        showMsg('未在游戏目录中找到 JSON 文本文件')
       } else {
         const dirNames = found.textDirs.map(d => '\\' + d.textDir.slice(gameDir.length).replace(/^[\\/]/, '')).join(', ')
-        showMsg('自动检索完成！在 [' + dirNames + '] 中共发现 ' + found.totalFiles + ' 个 JSON 文件')
+        showMsg('自动检测完成！在 [' + dirNames + '] 中共发现 ' + found.totalFiles + ' 个 JSON 文件')
       }
 
-      setShortcutInfo({
+      setGameInfo({
         lnkPath,
         gameDir,
         foundDirs: found.textDirs,
@@ -182,7 +182,7 @@ const App: React.FC = () => {
         setDirPath(gameDir)
       }
     } catch (err: any) {
-      showMsg('快捷方式处理失败: ' + err.message)
+      showMsg('游戏程序处理失败: ' + err.message)
     } finally {
       setResolving(false)
       setDetecting(false)
@@ -278,11 +278,11 @@ const App: React.FC = () => {
                   hover:border-blue-400 hover:text-blue-600 transition-colors">
                 📁 选择游戏目录
               </button>
-              <button onClick={handleSelectShortcut}
+              <button onClick={handleSelectExe}
                 disabled={resolving || detecting}
                 className="flex-1 py-2.5 border-2 border-dashed border-slate-300 text-slate-600 rounded-lg text-sm font-medium
                   hover:border-green-400 hover:text-green-600 disabled:opacity-40 transition-colors">
-                🔗 导入快捷方式
+                🎯 选择游戏程序
               </button>
             </div>
 
@@ -295,33 +295,33 @@ const App: React.FC = () => {
             )}
 
             {/* 快捷方式检测结果 */}
-            {shortcutInfo && (
+            {gameInfo && (
               <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-start gap-2">
                   <span className="text-green-600 mt-0.5">✓</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-green-600 font-medium">快捷方式自动解析成功</p>
+                    <p className="text-xs text-green-600 font-medium">游戏程序解析成功</p>
                     <p className="text-xs text-green-500 mt-1 break-all">
-                      快捷方式：{shortcutInfo.lnkPath}
+                      启动程序：{gameInfo.exePath}
                     </p>
                     <p className="text-xs text-green-500 break-all">
-                      游戏目录：{shortcutInfo.gameDir}
+                      游戏目录：{gameInfo.gameDir}
                     </p>
-                    {shortcutInfo.foundDirs.length > 0 && (
+                    {gameInfo.foundDirs.length > 0 && (
                       <div className="mt-2">
                         <p className="text-xs text-green-700 font-medium mb-1">
-                          自动检测到 {shortcutInfo.totalFiles} 个 JSON 文本文件：
+                          自动检测到 {gameInfo.totalFiles} 个 JSON 文本文件：
                         </p>
-                        {shortcutInfo.foundDirs.map((d, i) => (
+                        {gameInfo.foundDirs.map((d, i) => (
                           <div key={i}
                             className="flex items-center gap-1.5 text-xs text-green-600 py-0.5">
                             <span>📄</span>
-                            <span>{(d.textDir).slice(shortcutInfo.gameDir.length) || '(根目录)'}</span>
+                            <span>{(d.textDir).slice(gameInfo.gameDir.length) || '(根目录)'}</span>
                             <span className="text-green-400">({d.fileCount} 个文件)</span>
                           </div>
                         ))}
                         <p className="text-xs text-amber-600 mt-1">
-                          💡 已自动选中第一个文本目录，你也可以手动调整
+                          💡 已自动选中第一个文本目录
                         </p>
                       </div>
                     )}
@@ -477,6 +477,8 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 )
 
 export default App
+
+
 
 
 

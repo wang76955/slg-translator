@@ -5,7 +5,7 @@
 ## ✨ 功能
 
 - **📂 选择目录** — 手动选取游戏文本所在的 JSON 目录
-- **🔗 导入快捷方式** — 直接导入游戏的 `.lnk` 快捷方式，自动解析安装目录并检索文本文件
+- **🔗 导入快捷方式** — 直接选择游戏的 `.exe` 主程序，自动定位安装目录并检索文本文件
 - **🔍 自动扫描** — 递归扫描所有 JSON 文件，自动提取可翻译文本（过滤数字/URL/占位符）
 - **🌐 多语言** — 支持中/英/日/韩/法/德互译
 - **🤖 多 AI 提供商** — 支持 OpenAI (GPT-4o-mini/4o) 和 DeepSeek (deepseek-chat) 及自定义 API
@@ -25,7 +25,7 @@
 ### 前置要求
 
 - Node.js >= 18
-- Windows 7+（快捷方式导入功能依赖 Windows COM）
+- Windows 7+（选择游戏程序功能仅限 Windows）
 - OpenAI API Key 或 DeepSeek API Key
 
 ### 安装与运行
@@ -65,14 +65,14 @@ npm run pack
 4. **一键翻译** — 点击「开始翻译」，等待自动完成
 5. **导出结果** — 翻译后的文件会输出到 `{原目录名}_{目标语言}` 目录中
 
-### 方式二：导入快捷方式（推荐）
+### 方式二：选择游戏程序（推荐）
 
-> 适合不知道游戏文本文件在哪的用户
+> 适合不知道游戏文本文件在哪的用户，直接选游戏启动 exe 即可
 
-1. **导入快捷方式** — 点击「🔗 导入快捷方式」
-2. **选择 .lnk 文件** — 在弹出的文件选择器中选取游戏的桌面快捷方式（或开始菜单中的快捷方式）
-3. **自动解析** — 应用自动解析快捷方式目标，找出游戏安装目录
-4. **自动检索** — 在常见目录模式（`localization/`、`data/`、`Resources/`、`www/data/` 等）中查找 JSON 文本
+1. **选择游戏程序** — 点击「🎯 选择游戏程序」
+2. **选择 .exe 文件** — 在弹出的文件选择器中选取游戏主程序（如 SomeGame.exe）
+3. **自动定位** — 应用自动使用 exe 所在目录作为游戏安装目录
+4. **自动检索** — 在常见目录模式（localization/、data/、Resources/、www/data/ 等）中查找 JSON 文本
 5. **自动选中** — 自动将第一个找到的文本目录设为扫描目标，后续流程同方式一
 
 ## 📁 项目结构
@@ -89,16 +89,16 @@ slg-translator/
 │   ├── ipc-handlers.ts      #   IPC 处理器（目录/快捷方式/扫描/翻译）
 │   └── shortcut.ts          #   .lnk 快捷方式解析（PowerShell COM）
 ├── src/                     # React 前端
-│   ├── App.tsx              #   单页面应用（含快捷方式导入 UI）
+│   ├── App.tsx              #   单页面应用（含游戏程序选择 UI）
 │   └── main.tsx             #   入口
-├── preload.cjs              # preload 脚本（CJS 格式，修复 asar 内加载问题）
+├── preload.cjs              # preload 脚本（CJS 格式）
 ├── vite.config.ts           # Vite + Electron 构建配置
 └── package.json
 ```
 
 ## ⚠️ 注意事项
 
-- **快捷方式导入仅支持 Windows**：依赖 `WScript.Shell` COM 对象和 PowerShell，均为 Windows 自带组件
+- **选择游戏程序仅支持 Windows**：依赖 `WScript.Shell` COM 对象和 PowerShell，均为 Windows 自带组件
 - **PowerShell 无需额外安装**：Windows 7+ 均自带
 - **API Key 仅保存在本机**：不会上传或泄露
 - **打包后首次使用**：双击 `release/SLG-Translator-win32-x64/SLG-Translator.exe` 即可
@@ -111,3 +111,4 @@ slg-translator/
 ## 📜 许可证
 
 MIT
+
