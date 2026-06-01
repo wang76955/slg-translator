@@ -12,6 +12,41 @@
 - **⚡ 一键翻译** — 批量调用 AI 翻译，保持 JSON 结构完整导出
 - **📁 保持结构** — 输出目录保持与源目录完全相同的文件结构
 
+## 🎯 适用范围
+
+### ✅ 适合的游戏类型
+
+本工具适用于**以 JSON 文件存储文本**的游戏，常见于：
+
+- **Ren'Py 引擎游戏** — 文本通常位于 `game/tl/` 或 `game/*.rpy` 旁的同名 JSON
+- **RPG Maker MV / MZ** — 文本位于 `www/data/*.json`（如 `CommonEvents.json`、`Actors.json` 等）
+- **使用 Unity + JSON 本地化的游戏** — 部分 Unity 游戏将文本放在 `StreamingAssets/` 或 `localization/` 下的 JSON 中
+- **支持 Mod 的 Steam 游戏** — 文本常暴露在 `localization/`、`locales/`、`lang/` 等目录的 JSON 中
+- **自研引擎 + JSON 配置的游戏** — 许多国产 SLG 使用 JSON 作为配置文件
+
+### ❌ 不适合的游戏类型
+
+以下类型游戏**无法直接使用**本工具：
+
+| 类型 | 原因 | 推荐方案 |
+|------|------|----------|
+| Unity IL2CPP（二进制资源） | 文本嵌入在 resources.assets 等二进制包中 | 先用 AssetStudio 提取，再转换格式 |
+| Unreal Engine | 文本在 .locres 或 Pak 包中 | 使用 UE 本地化工具 |
+| Cocos2D / 自研引擎（加密资源） | 文本加密或打包在自定义格式中 | 需逆向分析 |
+| 视频 / 图片形式文本 | 非文本格式 | 无法处理 |
+
+### 🔍 如何快速判断？
+
+查看游戏目录下是否有 JSON 文件：
+
+```bash
+# 在游戏根目录下运行
+dir *.json /s
+```
+
+如果输出大量 JSON 且内容包含中文或英文对话文本，则大概率可用本工具。
+
+
 ## 🖥️ 技术栈
 
 | 层级 | 技术 |
