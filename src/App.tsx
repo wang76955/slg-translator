@@ -14,6 +14,13 @@ interface AiProvider {
   models: AiModel[]
 }
 
+interface ShortcutInfo {
+  lnkPath: string
+  gameDir: string
+  foundDirs: { textDir: string; fileCount: number }[]
+  totalFiles: number
+}
+
 // === 预定义 AI 服务提供商 ===
 const AI_PROVIDERS: AiProvider[] = [
   {
@@ -46,7 +53,6 @@ const AI_PROVIDERS: AiProvider[] = [
   },
 ]
 
-// 语言选项
 const LANGUAGES = [
   { value: 'zh', label: '中文' },
   { value: 'en', label: 'English' },
@@ -73,7 +79,16 @@ declare global {
         baseURL: string
         model: string
         outputDir: string
+        glossary?: { source: string; target: string }[]
       }) => Promise<{ success: boolean; count: number; outputDir: string; error?: string }>
+      // 快捷方式导入
+      selectShortcut: () => Promise<string | null>
+      resolveShortcut: (lnkPath: string) => Promise<{ gameDir: string | null; error?: string }>
+      findGameTexts: (gameDir: string) => Promise<{
+        textDirs: { textDir: string; fileCount: number }[]
+        totalFiles: number
+        error?: string
+      }>
     }
   }
 }
@@ -88,6 +103,11 @@ const App: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState(AI_PROVIDERS[0].models[0].id)
   const [customBaseURL, setCustomBaseURL] = useState('')
 
+  // 快捷方式状态
+  const [shortcutInfo, setShortcutInfo] = useState<ShortcutInfo | null>(null)
+  const [resolving, setResolving] = useState(false)
+  const [detecting, setDetecting] = useState(false)
+
   // 扫描结果
   const [scanResult, setScanResult] = useState<{
     files: { filePath: string; relativePath: string; textCount: number }[]
@@ -99,20 +119,77 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState({ current: 0, total: 0, phase: '' })
   const [result, setResult] = useState<{ success: boolean; count: number; outputDir: string; error?: string } | null>(null)
 
-  // 消息
+  
   const [message, setMessage] = useState('')
   const showMsg = useCallback((msg: string) => { setMessage(msg); setTimeout(() => setMessage(''), 4000) }, [])
 
-  // === 操作 ===
-  const handleSelectDir = async () => {
-    const dir = await window.electronAPI.selectDirectory()
-    if (dir) {
-      setDirPath(dir)
-      setScanResult(null)
-      setResult(null)
+  // === 操作：选择目录 ===
+    const handleSelectDir = async () => {
+    try {
+      const dir = await window.electronAPI.selectDirectory()
+      if (dir) {
+        setDirPath(dir)
+        setShortcutInfo(null)
+        setScanResult(null)
+        setResult(null)
+      }
+    } catch (err: any) {
+      showMsg('选择目录失败: ' + (err?.message || err))
     }
   }
 
+  // === 操作：导入快捷方式 ===
+  const handleSelectShortcut = async () => {
+    const lnkPath = await window.electronAPI.selectShortcut()
+    if (!lnkPath) return
+
+    setResolving(true)
+    setShortcutInfo(null)
+    setScanResult(null)
+    setResult(null)
+
+    try {
+      // 解析快捷方式
+      const { gameDir, error } = await window.electronAPI.resolveShortcut(lnkPath)
+      if (!gameDir) {
+        showMsg('解析快捷方式失败：' + (error || '无法获取目标路径'))
+        setResolving(false)
+        return
+      }
+
+      // 自动检索文本文件
+      setDetecting(true)
+      const found = await window.electronAPI.findGameTexts(gameDir)
+
+      if (found.totalFiles === 0) {
+        showMsg('未在游戏目录中找到 JSON 文本文件，可尝试手动选择目录')
+      } else {
+        const dirNames = found.textDirs.map(d => '\\' + d.textDir.slice(gameDir.length).replace(/^[\\/]/, '')).join(', ')
+        showMsg('自动检索完成！在 [' + dirNames + '] 中共发现 ' + found.totalFiles + ' 个 JSON 文件')
+      }
+
+      setShortcutInfo({
+        lnkPath,
+        gameDir,
+        foundDirs: found.textDirs,
+        totalFiles: found.totalFiles,
+      })
+
+      // 自动选中第一个有文本的目录作为扫描目标
+      if (found.textDirs.length > 0) {
+        setDirPath(found.textDirs[0].textDir)
+      } else {
+        setDirPath(gameDir)
+      }
+    } catch (err: any) {
+      showMsg('快捷方式处理失败: ' + err.message)
+    } finally {
+      setResolving(false)
+      setDetecting(false)
+    }
+  }
+
+  // === 操作：扫描 ===
   const handleScan = async () => {
     if (!dirPath) return
     try {
@@ -124,6 +201,7 @@ const App: React.FC = () => {
     }
   }
 
+  // === 操作：翻译 ===
   const handleTranslate = async () => {
     if (!dirPath || !apiKey) return
     if (!scanResult) {
@@ -138,7 +216,7 @@ const App: React.FC = () => {
     try {
       const baseURL = provider.id === 'custom' ? customBaseURL : provider.baseURL
       const separator = (dirPath.endsWith('\\') || dirPath.endsWith('/')) ? '' : '_'
-      const outputDir = dirPath + separator + targetLang
+      const outputDir = dirPath + '_' + targetLang
 
       const res = await window.electronAPI.runTranslation({
         dirPath, sourceLang, targetLang, apiKey,
@@ -161,76 +239,137 @@ const App: React.FC = () => {
 
   // 提供商切换
   const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const p = AI_PROVIDERS.find(p => p.id === e.target.value) ?? AI_PROVIDERS[0]
+    const pid = e.target.value
+    const p = AI_PROVIDERS.find(x => x.id === pid)!
     setProvider(p)
     setSelectedModel(p.models[0].id)
   }
 
-  const progressPct = progress.total > 0
-    ? Math.min(Math.round(progress.current / progress.total * 100), 100)
-    : 0
+  // 进度百分比
+  const progressPct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0
 
+  // === 渲染 ===
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
       <header className="bg-white border-b border-slate-200 px-6 py-4 shrink-0">
-        <h1 className="text-xl font-bold text-slate-800">SLG 文本翻译</h1>
-        <p className="text-xs text-slate-400 mt-0.5">选择游戏目录，一键翻译全部文本</p>
+        <div className="max-w-xl mx-auto flex items-center gap-3">
+          <span className="text-2xl">🌐</span>
+          <h1 className="text-lg font-bold text-slate-800">SLG 文本翻译工具</h1>
+          <span className="text-xs text-slate-400 ml-auto">v2.0</span>
+        </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-6 max-w-2xl mx-auto w-full">
-        <div className="space-y-5">
-          {message && (
-            <div className="px-4 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-lg">
-              {message}
-            </div>
-          )}
+      {/* 顶栏消息 */}
+      {message && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-sm px-5 py-2.5 rounded-xl shadow-lg animate-fade-in">
+          {message}
+        </div>
+      )}
 
-          {/* 第一步：选择目录 + 扫描 */}
-          <Section title="选择游戏文本目录">
-            <div className="flex gap-2">
-              <input value={dirPath} readOnly
-                placeholder="点击右侧按钮选择目录..."
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-600" />
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-xl mx-auto p-4 space-y-4">
+
+          {/* ===== 第一步：选择文本来源 ===== */}
+          <Section title="1. 选择文本来源">
+            {/* 两种导入方式 */}
+            <div className="flex gap-2 mb-3">
               <button onClick={handleSelectDir}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 shrink-0">
-                选择
+                className="flex-1 py-2.5 border-2 border-dashed border-slate-300 text-slate-600 rounded-lg text-sm font-medium
+                  hover:border-blue-400 hover:text-blue-600 transition-colors">
+                📁 选择游戏目录
+              </button>
+              <button onClick={handleSelectShortcut}
+                disabled={resolving || detecting}
+                className="flex-1 py-2.5 border-2 border-dashed border-slate-300 text-slate-600 rounded-lg text-sm font-medium
+                  hover:border-green-400 hover:text-green-600 disabled:opacity-40 transition-colors">
+                🔗 导入快捷方式
               </button>
             </div>
-            {dirPath && !scanResult && (
-              <button onClick={handleScan}
-                className="mt-2 text-sm text-blue-500 hover:text-blue-700">
-                扫描此目录
-              </button>
+
+            {/* 当前目录 */}
+            {dirPath && (
+              <div className="mb-2 p-2.5 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-400 mb-0.5">文本扫描目录：</p>
+                <p className="text-sm text-slate-700 font-mono break-all">{dirPath}</p>
+              </div>
             )}
+
+            {/* 快捷方式检测结果 */}
+            {shortcutInfo && (
+              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600 mt-0.5">✓</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-green-600 font-medium">快捷方式自动解析成功</p>
+                    <p className="text-xs text-green-500 mt-1 break-all">
+                      快捷方式：{shortcutInfo.lnkPath}
+                    </p>
+                    <p className="text-xs text-green-500 break-all">
+                      游戏目录：{shortcutInfo.gameDir}
+                    </p>
+                    {shortcutInfo.foundDirs.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-green-700 font-medium mb-1">
+                          自动检测到 {shortcutInfo.totalFiles} 个 JSON 文本文件：
+                        </p>
+                        {shortcutInfo.foundDirs.map((d, i) => (
+                          <div key={i}
+                            className="flex items-center gap-1.5 text-xs text-green-600 py-0.5">
+                            <span>📄</span>
+                            <span>{(d.textDir).slice(shortcutInfo.gameDir.length) || '(根目录)'}</span>
+                            <span className="text-green-400">({d.fileCount} 个文件)</span>
+                          </div>
+                        ))}
+                        <p className="text-xs text-amber-600 mt-1">
+                          💡 已自动选中第一个文本目录，你也可以手动调整
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 扫描按钮与结果 */}
+            <div className="space-y-2">
+              <button onClick={handleScan}
+                disabled={!dirPath || resolving || detecting}
+                className="w-full py-2.5 bg-emerald-500 text-white rounded-lg text-sm font-medium
+                  hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                {(resolving || detecting) ? '正在检测...' : '🔍 扫描文本文件'}
+              </button>
+
+              {scanResult && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700 font-medium">扫描结果</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    共发现 {scanResult.files.length} 个 JSON 文件，包含 {scanResult.totalTexts} 条可翻译文本
+                  </p>
+                  <div className="mt-2 max-h-28 overflow-y-auto space-y-0.5">
+                    {scanResult.files.slice(0, 20).map(f => (
+                      <p key={f.filePath} className="text-xs text-blue-500 truncate">
+                        {f.relativePath} <span className="text-blue-300">({f.textCount} 条)</span>
+                      </p>
+                    ))}
+                    {scanResult.files.length > 20 && (
+                      <p className="text-xs text-blue-400">...还有 {scanResult.files.length - 20} 个文件</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </Section>
 
-          {/* 扫描结果 */}
-          {scanResult && (
-            <Section title={'扫描结果（' + scanResult.files.length + ' 个文件，' + scanResult.totalTexts + ' 条文本）'}>
-              <div className="max-h-36 overflow-y-auto space-y-1">
-                {scanResult.files.map((f, i) => (
-                  <div key={i} className="flex justify-between text-xs text-slate-500 py-0.5">
-                    <span className="truncate">{f.relativePath}</span>
-                    <span className="shrink-0 ml-2">{f.textCount} 条</span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {/* 第二步：翻译设置 */}
-          <Section title="翻译设置">
-            <div className="space-y-4">
-              <div className="flex gap-4">
+          {/* ===== 第二步：API 配置 ===== */}
+          <Section title="2. API 配置">
+            <div className="space-y-3">
+              <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="block text-xs text-slate-500 mb-1">源语言</label>
                   <select value={sourceLang} onChange={e => setSourceLang(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
                     {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
                   </select>
-                </div>
-                <div className="flex items-end pb-2">
-                  <span className="text-slate-300 text-lg">&rarr;</span>
                 </div>
                 <div className="flex-1">
                   <label className="block text-xs text-slate-500 mb-1">目标语言</label>
@@ -281,8 +420,8 @@ const App: React.FC = () => {
             </div>
           </Section>
 
-          {/* 第三步：翻译 */}
-          <Section title="执行翻译">
+          {/* ===== 第三步：翻译 ===== */}
+          <Section title="3. 执行翻译">
             <button onClick={handleTranslate}
               disabled={translating || !dirPath || !apiKey}
               className="w-full py-3 bg-blue-500 text-white rounded-lg text-sm font-medium
@@ -338,3 +477,6 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 )
 
 export default App
+
+
+

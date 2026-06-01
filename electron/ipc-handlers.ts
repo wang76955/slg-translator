@@ -1,19 +1,78 @@
-import { ipcMain, dialog } from 'electron'
+﻿import { ipcMain, dialog } from 'electron'
 import { scanDirectory, exportTranslatedFiles } from '../core/scanner'
 import { translateBatch } from '../core/translator'
+import { resolveGameDir, findGameTextFiles } from './shortcut'
 import type { ScanResult, GlossaryEntry } from '../core/types'
 
 /**
- * 简化的 IPC 处理器 — 只保留核心功能
+ * 注册所有 IPC 处理器
  */
 export function registerIpcHandlers(): void {
-  // 选择目录
+  console.log("[SLG] registerIpcHandlers called")
+
+  // ===== 目录选择 =====
   ipcMain.handle('dialog:selectDirectory', async () => {
-    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
-    return result.canceled ? null : result.filePaths[0]
+    console.log("[SLG] dialog:selectDirectory handler invoked")
+    try {
+      const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
+      console.log("[SLG] dialog result:", result)
+      return result.canceled ? null : result.filePaths[0]
+    } catch (err) {
+      console.error("[SLG] dialog error:", err)
+      return null
+    }
   })
 
-  // 扫描目录下的 JSON 文件，提取文本
+  // ===== 快捷方式选择 =====
+  ipcMain.handle('dialog:selectShortcut', async () => {
+    console.log("[SLG] dialog:selectShortcut handler invoked")
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: [
+          { name: '快捷方式', extensions: ['lnk'] },
+          { name: '所有文件', extensions: ['*'] },
+        ],
+      })
+      console.log("[SLG] shortcut dialog result:", result)
+      return result.canceled ? null : result.filePaths[0]
+    } catch (err) {
+      console.error("[SLG] shortcut dialog error:", err)
+      return null
+    }
+  })
+
+  // ===== 解析快捷方式 =====
+  ipcMain.handle('shortcut:resolve', async (_, lnkPath: string): Promise<{
+    gameDir: string | null
+    error?: string
+  }> => {
+    try {
+      const gameDir = resolveGameDir(lnkPath)
+      return { gameDir }
+    } catch (err: any) {
+      return { gameDir: null, error: err.message }
+    }
+  })
+
+  // ===== 自动检索文本 =====
+  ipcMain.handle('shortcut:findTexts', async (_, gameDir: string): Promise<{
+    textDirs: { textDir: string; fileCount: number }[]
+    totalFiles: number
+    error?: string
+  }> => {
+    try {
+      const found = findGameTextFiles(gameDir)
+      return {
+        textDirs: found.map(f => ({ textDir: f.textDir, fileCount: f.files.length })),
+        totalFiles: found.reduce((sum, f) => sum + f.files.length, 0),
+      }
+    } catch (err: any) {
+      return { textDirs: [], totalFiles: 0, error: err.message }
+    }
+  })
+
+  // ===== 扫描目录 =====
   ipcMain.handle('translate:scan', async (_, dirPath: string): Promise<{
     files: { filePath: string; relativePath: string; textCount: number }[]
     totalTexts: number
@@ -29,7 +88,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // 执行翻译：扫描 → 翻译 → 导出，一站式完成
+  // ===== 执行翻译 =====
   ipcMain.handle('translate:run', async (_, data: {
     dirPath: string
     sourceLang: string
@@ -41,18 +100,7 @@ export function registerIpcHandlers(): void {
     glossary?: GlossaryEntry[]
   }): Promise<{ success: boolean; count: number; outputDir: string; error?: string }> => {
     try {
-      // 1. 扫描
       const results = scanDirectory(data.dirPath)
-
-      // 2. 收集所有文本
-      const allTexts = results.flatMap(r => r.texts.map(t => ({ ...t, filePath: r.filePath })))
-
-      // 3. 逐文件翻译
-      const scanResultsMap = new Map<string, ScanResult>()
-      for (const r of results) {
-        scanResultsMap.set(r.filePath, r)
-      }
-
       const allTranslations = new Map<string, Map<string, string>>()
 
       for (const result of results) {
@@ -68,10 +116,8 @@ export function registerIpcHandlers(): void {
         allTranslations.set(result.filePath, translations)
       }
 
-      // 4. 导出
       exportTranslatedFiles(results, allTranslations, data.outputDir)
 
-      const totalCount = allTexts.length
       const translatedCount = Array.from(allTranslations.values())
         .reduce((sum, m) => sum + m.size, 0)
 
