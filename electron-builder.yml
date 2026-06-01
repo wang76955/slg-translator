@@ -7,11 +7,15 @@ files:
   - dist/**/*
   - dist-electron/**/*
 win:
+  icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
 mac:
+  icon: resources/icon.png
   target: [dmg]
 nsis:
   oneClick: true
   allowToChangeInstallationDirectory: false
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico

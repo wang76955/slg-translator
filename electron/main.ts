@@ -1,4 +1,4 @@
-﻿import { app, BrowserWindow } from 'electron'
+﻿import { app, BrowserWindow, nativeImage } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import * as fs from 'fs'
@@ -26,8 +26,12 @@ log('=== APP STARTED ===')
 let mainWindow: BrowserWindow | null = null
 
 function createWindow() {
-  const preloadPath = path.join(__dirname, '../preload.cjs')
+  const preloadPath = path.join(__dirname, './preload.cjs')
   log('preload=' + preloadPath + ' exists=' + fs.existsSync(preloadPath))
+
+  // 加载应用图标
+  const iconPath = path.join(__dirname, '../resources', process.platform === 'darwin' ? 'icon.png' : 'icon.ico')
+  const icon = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : undefined
 
   mainWindow = new BrowserWindow({
     width: 800,
@@ -35,6 +39,7 @@ function createWindow() {
     minWidth: 640,
     minHeight: 560,
     title: 'SLG 文本翻译工具',
+    icon,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -68,3 +73,4 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+

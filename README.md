@@ -123,22 +123,33 @@ npm run pack
 
 ```
 slg-translator/
-├── core/                    # 平台无关核心引擎（可复用于未来 Android 版）
-│   ├── types.ts             #   共享类型定义
-│   ├── scanner.ts           #   JSON 扫描与文本提取
-│   ├── translator.ts        #   AI 翻译引擎（OpenAI/DeepSeek）
-│   └── providers.ts         #   AI 提供商配置
-├── electron/                # Electron 主进程
-│   ├── main.ts              #   窗口管理与启动日志
-│   ├── ipc-handlers.ts      #   IPC 处理器（目录/快捷方式/扫描/翻译）
-│   └── shortcut.ts          #   .lnk 快捷方式解析（PowerShell COM）
 ├── src/                     # React 前端
-│   ├── App.tsx              #   单页面应用（含游戏程序选择 UI）
-│   └── main.tsx             #   入口
-├── preload.cjs              # preload 脚本（CJS 格式）
-├── vite.config.ts           # Vite + Electron 构建配置
-└── package.json
-```
+│   ├── components/           #   UI 组件
+│   │   └── Section.tsx       #   卡片容器组件
+│   ├── constants/            #   常量配置
+│   │   └── index.ts          #   AI 提供商 + 语言列表
+│   ├── types/                #   类型定义
+│   │   ├── index.ts          #   共享类型
+│   │   └── electron.d.ts     #   electronAPI 声明
+│   ├── App.tsx               #   主页面
+│   ├── index.css
+│   └── main.tsx              #   入口
+├── electron/                 # Electron 主进程
+│   ├── main.ts               #   窗口管理与启动日志
+│   ├── ipc-handlers.ts       #   IPC 处理器
+│   ├── shortcut.ts           #   游戏目录文本检索
+│   └── preload.cjs           #   preload 脚本（CJS）
+├── core/                     # 平台无关核心引擎
+│   ├── types.ts
+│   ├── scanner.ts
+│   ├── translator.ts
+│   └── providers.ts
+├── index.html
+├── vite.config.ts
+├── package.json
+└── README.md
+`
+
 
 ## ⚠️ 注意事项
 
