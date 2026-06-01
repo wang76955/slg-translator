@@ -1,0 +1,57 @@
+﻿{
+  "ui": {
+    "menu": {
+      "start": "开始游戏",
+      "settings": "设置",
+      "exit": "退出游戏",
+      "load_game": "加载存档",
+      "save_game": "保存游戏"
+    },
+    "common": {
+      "confirm": "确认",
+      "cancel": "取消",
+      "yes": "是",
+      "no": "否",
+      "close": "关闭"
+    }
+  },
+  "units": {
+    "swordsman": {
+      "name": "剑士",
+      "desc": "装备长剑和盾牌的步兵，攻守兼备",
+      "skill": "格挡"
+    },
+    "archer": {
+      "name": "弓箭手",
+      "desc": "远程攻击单位，对步兵有额外伤害",
+      "skill": "精准射击"
+    },
+    "cavalry": {
+      "name": "骑兵",
+      "desc": "高机动部队，擅长侧翼突袭",
+      "skill": "冲锋"
+    }
+  },
+  "buildings": {
+    "castle": {
+      "name": "城堡",
+      "desc": "核心建筑，提升城堡等级可解锁更多功能"
+    },
+    "barracks": "兵营",
+    "academy": "学院 - 研究科技提升部队能力"
+  },
+  "quests": [
+    {
+      "id": "q001",
+      "title": "初出茅庐",
+      "desc": "训练 5 名剑士以保卫城镇",
+      "reward": "金币 x100"
+    },
+    {
+      "id": "q002", 
+      "title": "扩张领土",
+      "desc": "占领 3 个资源点",
+      "reward": "木材 x500"
+    }
+  ]
+}

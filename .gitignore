@@ -1,0 +1,11 @@
+﻿node_modules/
+dist/
+dist-electron/
+release/
+data/
+*.db
+.env
+__pycache__/
+*.pyc
+.DS_Store
+*.log

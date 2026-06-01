@@ -1,0 +1,25 @@
+﻿appId: com.slg-translator.app
+productName: SLG-Translator
+directories:
+  output: release
+  buildResources: resources
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - python/**/*
+extraResources:
+  - from: python/
+    to: python/
+    filter:
+      - '**/*'
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: \-\-\.\
+mac:
+  target: [dmg]
+  artifactName: \-\-\.\
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
