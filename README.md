@@ -1,164 +1,101 @@
-﻿# 🎮 SLG Text Translator
+> ## ⚠️ Android 版请前往新仓库
+>
+> 新仓库：[wang76955/Android-slg-translator](https://github.com/wang76955/Android-slg-translator)
+>
+> 本仓库为旧版 **Windows 桌面工具**，已停止维护；Windows 版 Release（v2.0.0）已标记为 **已废弃**，不再提供更新。
 
-> One-click translation for SLG game text files. Supports OpenAI / DeepSeek and other AI translation services.
+# 🎮 SLG 文本翻译工具
 
-## ✨ Features
+SLG（策略类游戏）文本本地化桌面工具。支持多语言翻译、术语管理、批量处理，保持 JSON 结构完整性。
 
-- **📂 Select Directory** — Manually pick the folder containing game JSON files
-- **🎯 Pick Game EXE** — Select the game's `.exe` file; automatically locates the install directory and finds text files
-- **🔍 Auto Scan** — Recursively scans all JSON files, automatically extracts translatable text (filters out numbers, URLs, placeholders)
-- **🌐 Multi-language** — Supports translation between Chinese, English, Japanese, Korean, French, and German
-- **🤖 Multiple AI Providers** — Supports OpenAI (GPT-4o-mini/4o), DeepSeek (deepseek-chat), and custom API endpoints
-- **⚡ One-click Translation** — Batch AI translation while preserving the original JSON structure
-- **📁 Structure Preserved** — Output directory mirrors the source directory structure exactly
+## ✨ 功能
 
-## 🎯 Scope
+- **项目化管理** — 创建翻译项目，关联游戏文本目录，自动扫描所有 JSON 文件
+- **智能 JSON 解析** — 递归提取字符串，自动过滤数字/URL/占位符，展示 Key → 原文对照
+- **AI 翻译** — 基于 OpenAI API（GPT-4o-mini / GPT-4o），支持中 ↔ 英/日/韩/法/德等多语种
+- **术语管理** — 维护角色名/技能名/物品名等术语表，翻译时自动匹配确保一致性
+- **翻译编辑器** — 左右对照视图，逐条编辑，搜索筛选，翻译进度条
+- **批量操作** — 一键批量 AI 翻译，增量翻译（只翻新增/变更内容）
+- **导出** — 保持原始 JSON 结构，支持 JSON / Excel 导出
 
-### ✅ Compatible Games
+## 🖥️ 技术栈
 
-This tool works with games that **store text in JSON files**, commonly found in:
+| 层级 | 技术 |
+|------|------|
+| 桌面壳 | Electron |
+| 前端 | React + TypeScript + Tailwind CSS |
+| 状态管理 | Zustand |
+| 翻译引擎 | Python（OpenAI API） |
+| 存储 | SQLite（better-sqlite3） |
 
-- **Ren'Py Engine** — Text is typically in `game/tl/` or sidecar JSON files alongside `game/*.rpy`
-- **RPG Maker MV / MZ** — Text at `www/data/*.json` (e.g., `CommonEvents.json`, `Actors.json`)
-- **Unity + JSON Localization** — Some Unity games store text in `StreamingAssets/` or `localization/` as JSON
-- **Mod-friendly Steam Games** — Text often exposed in `localization/`, `locales/`, `lang/` directories
-- **Custom Engines with JSON Config** — Many indie SLG titles use JSON for configuration and dialogue
+## 🚀 快速开始
 
-### ❌ Incompatible Games
-
-The following game types **cannot be used directly**:
-
-| Type | Reason | Recommended Approach |
-|------|--------|---------------------|
-| Unity IL2CPP (binary assets) | Text embedded in `resources.assets` bundles | Extract with AssetStudio first, then convert |
-| Unreal Engine | Text in `.locres` or `.pak` archives | Use UE localization tools |
-| Cocos2D / Encrypted Custom Engines | Text encrypted or packed in proprietary formats | Requires reverse engineering |
-| Video / Image-based Text | Not text-based format | Not supported |
-
-### 🔍 Quick Check
-
-Look for JSON files in the game directory:
-
-```bash
-# Run in the game root directory
-dir *.json /s
-```
-
-If you see many JSON files containing dialogue or UI text in Chinese/English, this tool will likely work.
-
-## 🖥️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Desktop Shell | Electron |
-| Frontend | React + Tailwind CSS |
-| Translation Engine | Node.js (OpenAI SDK) |
-
-## 🚀 Quick Start
-
-### Download (Recommended)
-
-> No development environment required. Download and run.
-
-Go to the [Releases page](https://github.com/wang76955/slg-translator/releases) and download the latest `SLG-Translator-v2.0-win32-x64.zip`.
-Extract the archive and run `SLG-Translator.exe`.
-
-### Build from Source\n\n#### Prerequisites
+### 前置要求
 
 - Node.js >= 18
-- Windows 7+ (Game EXE picker is Windows-only)
-- OpenAI API Key or DeepSeek API Key
+- Python >= 3.8
+- OpenAI API Key
 
-### Install & Run
+### 安装与运行
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/wang76955/slg-translator.git
 cd slg-translator
 
-# Install dependencies
+# 安装 Node 依赖
 npm install
 
-# Start in development mode (Hot Reload)
+# 安装 Python 依赖
+pip install openai
+
+# 开发模式启动
 npm run dev
 ```
 
-### Build a Distributable Package
+### 构建安装包
+
+> ⚠️ **已废弃**：Windows 版不再维护，请使用 [Android 版](https://github.com/wang76955/Android-slg-translator)。
 
 ```bash
-# Build frontend + main process
-npm run build
-
-# Package as a standalone Windows exe (output in release/ directory)
-npm run pack
+npm run electron:build
 ```
 
-After packaging, run `release/SLG-Translator-win32-x64/SLG-Translator.exe`.
-You can create a desktop shortcut to this exe for daily use.
+Windows 生成 release/SLG-Translator-x.x.x-x64.exe
+macOS 生成 release/SLG-Translator-x.x.x-x64.dmg
 
-## 📖 Usage
+## 📖 使用流程
 
-### Method 1: Select Directory (Traditional)
+1. **新建项目** — 填写项目名称，选择游戏 JSON 文件目录
+2. **设置 API Key** — 在「设置」选项卡填入 OpenAI API Key
+3. **选择文件** — 左侧文件树点击 JSON 文件，加载可翻译文本
+4. **管理术语** — 在「术语表」中添加角色名/技能名等固定译法
+5. **AI 翻译** — 点击「AI 批量翻译」，等待处理完成
+6. **校对编辑** — 点击译文区域可逐条手动修改
+7. **导出** — 保持原始结构导出翻译后的 JSON
 
-1. **Select Directory** — Click「📁 选择游戏目录」and pick the folder containing JSON game files
-2. **Scan Files** — Click「🔍 扫描文本文件」to preview translatable content
-3. **Configure Translation** — Choose source/target language, AI provider (OpenAI/DeepSeek/Custom), and enter your API Key
-4. **One-click Translate** — Click「开始翻译」and wait for completion
-5. **Export Results** — Translated files are output to `{original_dir_name}_{target_lang}` directory
-
-### Method 2: Pick Game EXE (Recommended)
-
-> Ideal if you don't know where the game's text files are — just pick the game executable.
-
-1. **Pick Game EXE** — Click「🎯 选择游戏程序」
-2. **Select .exe File** — Browse and select the game's main executable (e.g., `SomeGame.exe`)
-3. **Auto Locate** — The app uses the exe's directory as the game install directory
-4. **Auto Search** — Searches common patterns (`localization/`, `data/`, `Resources/`, `www/data/`, etc.) for JSON files
-5. **Auto Select** — Automatically selects the first found text directory as the scan target, then proceeds as Method 1
-
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 slg-translator/
-├── src/                     # React Frontend
-│   ├── components/           #   UI Components
-│   │   └── Section.tsx       #   Card container component
-│   ├── constants/            #   Constants
-│   │   └── index.ts          #   AI providers + language list
-│   ├── types/                #   Type definitions
-│   │   ├── index.ts          #   Shared types
-│   │   └── electron.d.ts     #   electronAPI type declaration
-│   ├── App.tsx               #   Main page
-│   ├── index.css
-│   └── main.tsx              #   Entry point
-├── electron/                 # Electron Main Process
-│   ├── main.ts               #   Window management & startup log
-│   ├── ipc-handlers.ts       #   IPC handlers
-│   ├── shortcut.ts           #   Game directory text search
-│   └── preload.cjs           #   Preload script (CJS)
-├── core/                     # Platform-agnostic Core Engine
-│   ├── types.ts
-│   ├── scanner.ts
-│   ├── translator.ts
-│   └── providers.ts
-├── index.html
-├── vite.config.ts
-├── package.json
-└── README.md
+├── electron/              # Electron 主进程
+│   ├── main.ts            # 窗口管理
+│   ├── preload.ts         # IPC 桥接
+│   ├── database.ts        # SQLite 数据库
+│   └── ipc-handlers.ts    # IPC 处理器（20+ API）
+├── src/                   # React 前端
+│   ├── pages/             # 页面组件
+│   ├── components/        # UI 组件
+│   ├── stores/            # Zustand 状态
+│   └── types/             # TypeScript 类型
+├── python/                # 翻译引擎
+│   ├── translator.py      # OpenAI API 调用
+│   ├── json_parser.py     # JSON 解析
+│   └── glossary.py        # 术语表处理
+├── test-data/             # 示例测试数据
+└── package.json
 ```
 
-## ⚠️ Notes
-
-- **Game EXE Picker is Windows-only** — Uses the system file dialog to select `.exe` files
-- **API Key stays on your machine** — Never uploaded or shared
-- **First run after packaging** — Double-click `release/SLG-Translator-win32-x64/SLG-Translator.exe`
-
-## 🔮 Future Plans
-
-- Android version (the `core/` module is already platform-agnostic and reusable)
-- Glossary management (glossary support is already built into the translation engine)
-
-## 📜 License
+## 📜 许可证
 
 MIT
-
